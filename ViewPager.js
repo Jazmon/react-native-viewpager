@@ -42,6 +42,7 @@ var ViewPager = React.createClass({
     autoPlay: PropTypes.bool,
     animation: PropTypes.func,
     initialPage: PropTypes.number,
+    indicatorPosition: PropTypes.oneOf(['up, down']),
   },
 
   fling: false,
@@ -50,6 +51,7 @@ var ViewPager = React.createClass({
     return {
       isLoop: false,
       locked: false,
+      indicatorPosition: 'down',
       animation: function(animate, toValue, gs) {
         return Animated.spring(animate,
           {
@@ -314,18 +316,27 @@ var ViewPager = React.createClass({
             });
           }}
         >
-
+        {this.props.indicatorPosition === 'up'
+          && this.renderPageIndicator({
+            goToPage: this.goToPage,
+            pageCount: pageIDs.length,
+            activePage: this.state.currentPage,
+            scrollValue: this.state.scrollValue,
+            scrollOffset: this.childIndex,
+        })}
         <Animated.View style={[sceneContainerStyle, {transform: [{translateX}]}]}
           {...this._panResponder.panHandlers}>
           {bodyComponents}
         </Animated.View>
 
-        {this.renderPageIndicator({goToPage: this.goToPage,
-                            pageCount: pageIDs.length,
-                            activePage: this.state.currentPage,
-                            scrollValue: this.state.scrollValue,
-                            scrollOffset: this.childIndex,
-                          })}
+        {this.props.indicatorPosition === 'down'
+          && this.renderPageIndicator({
+            goToPage: this.goToPage,
+            pageCount: pageIDs.length,
+            activePage: this.state.currentPage,
+            scrollValue: this.state.scrollValue,
+            scrollOffset: this.childIndex,
+        })}
       </View>
     );
   }
