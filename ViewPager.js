@@ -42,7 +42,7 @@ var ViewPager = React.createClass({
     autoPlay: PropTypes.bool,
     animation: PropTypes.func,
     initialPage: PropTypes.number,
-    indicatorPosition: PropTypes.oneOf(['up, down']),
+    indicatorPosition: PropTypes.oneOf(['up', 'down']),
   },
 
   fling: false,
