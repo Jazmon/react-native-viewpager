@@ -76,12 +76,18 @@ const ViewPager = React.createClass({
       const relativeGestureDistance = gestureState.dx / deviceWidth;
       // const lastPageIndex = this.props.children.length - 1,
       const vx = gestureState.vx;
-
+      const relativeSwitchDistance = 0.2;
+      const minVelocity = 1e-6;
       let step = 0;
-      if (relativeGestureDistance < -0.5 || (relativeGestureDistance < 0 && vx <= -1e-6)) {
+
+      if (relativeGestureDistance < -relativeSwitchDistance ||
+        (relativeGestureDistance < 0 && vx <= -minVelocity)) {
         step = 1;
-      } else if (relativeGestureDistance > 0.5 || (relativeGestureDistance > 0 && vx >= 1e-6)) {
+      } else if (relativeGestureDistance > relativeSwitchDistance ||
+        (relativeGestureDistance > 0 && vx >= minVelocity)) {
         step = -1;
+      } else if (Math.abs(gestureState.dx) < 10 && Math.abs(gestureState.dy) < 10) {
+        if (this.props.onPress) this.props.onPress(this.state.currentPage);
       }
 
       if (this.props.hasTouch) this.props.hasTouch(false);
@@ -90,6 +96,7 @@ const ViewPager = React.createClass({
     };
 
     this._panResponder = PanResponder.create({
+      onStartShouldSetPanResponder: (e, gestureState) => true,
       // Claim responder if it's a horizontal pan
       onMoveShouldSetPanResponder: (e, gestureState) => {
         if (Math.abs(gestureState.dx) > Math.abs(gestureState.dy)) {
@@ -298,6 +305,14 @@ const ViewPager = React.createClass({
       outputRange: [0, -viewWidth],
     });
 
+    const pageIndicatorProps = {
+      goToPage: this.goToPage,
+      pageCount: pageIDs.length,
+      activePage: this.state.currentPage,
+      scrollValue: this.state.scrollValue,
+      scrollOffset: this.childIndex,
+    };
+
     return (
       <View
         style={{ flex: 1 }}
@@ -314,13 +329,8 @@ const ViewPager = React.createClass({
         }}
       >
         {this.props.indicatorPosition === 'up'
-          && this.renderPageIndicator({
-            goToPage: this.goToPage,
-            pageCount: pageIDs.length,
-            activePage: this.state.currentPage,
-            scrollValue: this.state.scrollValue,
-            scrollOffset: this.childIndex,
-          })}
+          && this.renderPageIndicator(pageIndicatorProps)
+        }
         <Animated.View
           style={[sceneContainerStyle, { transform: [{ translateX }] }]}
           {...this._panResponder.panHandlers}
@@ -329,13 +339,8 @@ const ViewPager = React.createClass({
         </Animated.View>
 
         {this.props.indicatorPosition === 'down'
-          && this.renderPageIndicator({
-            goToPage: this.goToPage,
-            pageCount: pageIDs.length,
-            activePage: this.state.currentPage,
-            scrollValue: this.state.scrollValue,
-            scrollOffset: this.childIndex,
-          })}
+          && this.renderPageIndicator(pageIndicatorProps)
+        }
       </View>
     );
   },
