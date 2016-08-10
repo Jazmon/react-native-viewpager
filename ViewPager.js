@@ -41,6 +41,7 @@ const ViewPager = React.createClass({
     locked: PropTypes.bool,
     autoPlay: PropTypes.bool,
     animation: PropTypes.func,
+    relativeSwitchDistance: PropTypes.number,
     initialPage: PropTypes.number,
     indicatorPosition: PropTypes.oneOf(['up', 'down']),
   },
@@ -51,6 +52,7 @@ const ViewPager = React.createClass({
     return {
       isLoop: false,
       locked: false,
+      relativeSwitchDistance: 0.5,
       indicatorPosition: 'down',
       animation: (animate, toValue, gs) =>
         Animated.spring(animate, {
@@ -76,7 +78,7 @@ const ViewPager = React.createClass({
       const relativeGestureDistance = gestureState.dx / deviceWidth;
       // const lastPageIndex = this.props.children.length - 1,
       const vx = gestureState.vx;
-      const relativeSwitchDistance = 0.2;
+      const relativeSwitchDistance = this.props.relativeSwitchDistance;
       const minVelocity = 1e-6;
       let step = 0;
 
