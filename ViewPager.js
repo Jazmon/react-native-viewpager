@@ -7,10 +7,9 @@ import {
   Animated,
   StyleSheet,
 } from 'react-native';
-
 import StaticRenderer from 'react-native/Libraries/Components/StaticRenderer';
-import DefaultViewPageIndicator from './DefaultViewPageIndicator';
 
+import DefaultViewPageIndicator from './DefaultViewPageIndicator';
 import ViewPagerDataSource from './ViewPagerDataSource';
 
 type IndicatorPosition = 'down' | 'up';
@@ -118,11 +117,12 @@ class ViewPager extends Component<DefaultProps, Props, State> {
     this.childIndex = 0;
     const deviceWidth = Dimensions.get('window').width;
 
+    // Handles the page drag release
     const release = (e, gestureState) => {
       const relativeGestureDistance = gestureState.dx / deviceWidth;
       // const lastPageIndex = this.props.children.length - 1,
-      const vx = gestureState.vx;
-      const relativeSwitchDistance = this.props.relativeSwitchDistance;
+      const { vx } = gestureState;
+      const { relativeSwitchDistance } = this.props;
       const minVelocity = 1e-6;
       let step = 0;
 
@@ -137,7 +137,6 @@ class ViewPager extends Component<DefaultProps, Props, State> {
       }
 
       if (this.props.hasTouch) this.props.hasTouch(false);
-
       this.movePage(step, gestureState);
     };
 
@@ -172,6 +171,7 @@ class ViewPager extends Component<DefaultProps, Props, State> {
       this.childIndex = 1;
       this.state.scrollValue.setValue(1);
     }
+
     if (this.props.initialPage) {
       const initialPage = Number(this.props.initialPage);
       if (initialPage > 0) {
@@ -181,9 +181,7 @@ class ViewPager extends Component<DefaultProps, Props, State> {
   }
 
   componentDidMount() {
-    if (this.props.autoPlay) {
-      this.startAutoPlay();
-    }
+    if (this.props.autoPlay) this.startAutoPlay();
   }
 
   componentWillReceiveProps(nextProps: Props) {
@@ -218,7 +216,7 @@ class ViewPager extends Component<DefaultProps, Props, State> {
     }
   }
 
-  startAutoPlay() {
+  startAutoPlay(): void {
     if (!this.autoPlayer) {
       this.autoPlayer = setInterval(() => {
         this.movePage(1);
@@ -226,7 +224,7 @@ class ViewPager extends Component<DefaultProps, Props, State> {
     }
   }
 
-  goToPage(pageNumber: number, animate: boolean = true) {
+  goToPage(pageNumber: number, animate: boolean = true): void {
     const pageCount = this.props.dataSource.getPageCount();
     if (pageNumber < 0 || pageNumber >= pageCount) {
       console.error('Invalid page number: ', pageNumber);
@@ -234,26 +232,36 @@ class ViewPager extends Component<DefaultProps, Props, State> {
     }
 
     const step = pageNumber - this.state.currentPage;
+    console.log('goToPage', { pageNumber, animate, step });
     this.movePage(step, null, animate);
   }
 
-  movePage(step: number, gs: ?Object, animate: boolean = true) {
-    const pageCount = this.props.dataSource.getPageCount();
-    let pageNumber = this.state.currentPage + step;
-    if (this.props.isLoop) {
+  /**
+   * Automatically moves the page to step
+   * @param step the number of pages where to move, minus indicating backwards direction
+   * @param gs is an optional gestureState if the move was triggered by gesture
+   * @param animate boolean whether to animate the transition
+   */
+  movePage(step: number, gs: ?Object, animate: boolean = true): void {
+    const pageCount: number = this.props.dataSource.getPageCount();
+    const { currentPage } = this.state;
+    let pageNumber: number = currentPage + step;
+    const { isLoop } = this.props;
+
+    if (isLoop) {
       pageNumber = (pageNumber + pageCount) % pageCount;
     } else {
       pageNumber = Math.min(Math.max(0, pageNumber), pageCount - 1);
     }
 
-    const moved = pageNumber !== this.state.currentPage;
-    const scrollStep = (moved ? step : 0) + this.childIndex;
-    const nextChildIdx = (pageNumber > 0 || this.props.isLoop) ? 1 : 0;
+    const moved: boolean = pageNumber !== this.state.currentPage;
+    const scrollStep: number = (moved ? step : 0) + this.childIndex;
+    const nextChildIndex: number = (pageNumber > 0 || isLoop) ? 1 : 0;
 
-    const postChange = () => {
+    const postChange: Function = () => {
       this.fling = false;
-      this.childIndex = nextChildIdx;
-      this.state.scrollValue.setValue(nextChildIdx);
+      this.childIndex = nextChildIndex;
+      this.state.scrollValue.setValue(nextChildIndex);
       this.setState({
         currentPage: pageNumber,
       });
@@ -264,9 +272,10 @@ class ViewPager extends Component<DefaultProps, Props, State> {
       this.props.animation(this.state.scrollValue, scrollStep, gs)
         .start((event) => {
           if (event.finished) {
+            console.log('anim finished');
             postChange();
+            if (moved && this.props.onChangePage) this.props.onChangePage(pageNumber);
           }
-          if (moved && this.props.onChangePage) this.props.onChangePage(pageNumber);
         });
     } else {
       postChange();
@@ -274,20 +283,24 @@ class ViewPager extends Component<DefaultProps, Props, State> {
     }
   }
 
-  getCurrentPage() {
+  /**
+   * Returns the current page number
+   */
+  getCurrentPage(): number {
     return this.state.currentPage;
   }
 
-  getPage(pageIdx: number, loop: boolean = false) {
+  getPage(pageIndex: number, loop: boolean = false): React.Element<*> {
     const dataSource = this.props.dataSource;
-    const pageID = dataSource.pageIdentities[pageIdx];
+    const pageID = dataSource.pageIdentities[pageIndex];
 
     const renderWithProps = this.props.renderPage.bind(
       null,
-      dataSource.getPageData(pageIdx),
+      dataSource.getPageData(pageIndex),
       pageID,
       this.state.currentPage
     );
+
     return (
       <StaticRenderer
         key={`p_${pageID}${loop ? '_1' : ''}`}
@@ -297,13 +310,18 @@ class ViewPager extends Component<DefaultProps, Props, State> {
     );
   }
 
+  /**
+   * Renders the current page component
+   */
   renderPageIndicator: Function;
-  renderPageIndicator(props: Object) {
+  renderPageIndicator(props: Object): ?React.Element<*> {
+    // Check if custom page indicator or no indicator
     if (this.props.renderPageIndicator === false) {
       return null;
     } else if (this.props.renderPageIndicator) {
       return React.cloneElement(this.props.renderPageIndicator(), props);
     }
+
     return (
       <View style={styles.indicators}>
         <DefaultViewPageIndicator {...props} />
@@ -312,25 +330,22 @@ class ViewPager extends Component<DefaultProps, Props, State> {
   }
 
   render() {
-    const dataSource = this.props.dataSource;
-    const pageIDs = dataSource.pageIdentities;
+    const { dataSource } = this.props;
+    const pageIDs: Array<any> = dataSource.pageIdentities;
 
-    const bodyComponents = [];
+    const bodyComponents: Array<React.Element<*>> = [];
 
-    let pagesNum = 0;
-    // let hasLeft = false;
-    const viewWidth = this.state.viewWidth;
+    let pagesNum: number = 0;
+    const viewWidth: number = this.state.viewWidth;
 
     if (pageIDs.length > 0 && viewWidth > 0) {
       // left page
       if (this.state.currentPage > 0) {
         bodyComponents.push(this.getPage(this.state.currentPage - 1));
         pagesNum++;
-        // hasLeft = true;
       } else if (this.state.currentPage === 0 && this.props.isLoop) {
         bodyComponents.push(this.getPage(pageIDs.length - 1, true));
         pagesNum++;
-        // hasLeft = true;
       }
 
       // center page
@@ -347,7 +362,7 @@ class ViewPager extends Component<DefaultProps, Props, State> {
       }
     }
 
-    const sceneContainerStyle = {
+    const sceneContainerStyle: Object = {
       width: viewWidth * pagesNum,
       flex: 1,
       flexDirection: 'row',
@@ -355,12 +370,12 @@ class ViewPager extends Component<DefaultProps, Props, State> {
 
     // this.childIndex = hasLeft ? 1 : 0;
     // this.state.scrollValue.setValue(this.childIndex);
-    const translateX = this.state.scrollValue.interpolate({
+    const translateX: number = this.state.scrollValue.interpolate({
       inputRange: [0, 1],
       outputRange: [0, -viewWidth],
     });
 
-    const pageIndicatorProps = {
+    const pageIndicatorProps: Object = {
       goToPage: this.goToPage,
       pageCount: pageIDs.length,
       activePage: this.state.currentPage,
@@ -414,4 +429,3 @@ const styles = StyleSheet.create({
 });
 
 export default ViewPager;
-
